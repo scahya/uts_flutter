@@ -2,17 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import './components/userInfo.dart';
 import './components/grid.dart';
-// class UserData {
-//   final String title;
-//   final String description;
-
-//   const UserData(this.title, this.description);
-// }
 
 class Dashboard extends StatefulWidget {
   String Name, Email, DateBirth, Password;
   // const Dasboard({super.key});
-
   Dashboard(
       {Key? key,
       required this.Name,
@@ -31,7 +24,6 @@ class _Dashboard extends State<Dashboard> {
     "DateBirth": widget.DateBirth,
     "Password": widget.Password
   };
-
   int selectedIndex = 0;
   late final List<Widget> _pages = <Widget>[
     UserInfo(userData: _userData),
@@ -108,10 +100,13 @@ class _Dashboard extends State<Dashboard> {
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: selectedIndex, //New
+          selectedItemColor: Color(0xffef6b63),
           onTap: _onItemTapped,
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
+              icon: Icon(
+                Icons.person,
+              ),
               label: 'User',
             ),
             BottomNavigationBarItem(
