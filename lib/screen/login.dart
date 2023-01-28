@@ -1,8 +1,14 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import './dash.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import './../model/user.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -23,6 +29,29 @@ Widget forgotPassBtn() {
 }
 
 class _LoginState extends State<Login> {
+  String idU = '';
+  late SharedPreferences preferences;
+  bool isHidden = true;
+
+  Future init() async {
+    preferences = await SharedPreferences.getInstance();
+    final userJson = preferences.getString('user');
+    if (userJson == null) return;
+
+    final user = User.fromJson(jsonDecode(userJson));
+    setState(() => this.user = user);
+    bool? isLogged = preferences.getBool('isLogged');
+    if (isLogged == true) {
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => Dashboard(
+                    user: user,
+                  )));
+    }
+  }
+
+  var user;
   final EmailCon = TextEditingController();
   final PassCon = TextEditingController();
   final NameCon = TextEditingController();
@@ -42,6 +71,24 @@ class _LoginState extends State<Login> {
   void initState() {
     dateInput.text = ""; //set the initial value of text field
     super.initState();
+    init();
+  }
+
+  Future storePersist(dateInput) async {
+    final user = User(
+      email: regisEmail,
+      name: NameCon.text,
+      password: regisPass,
+      dateBirth: dateInput,
+    );
+    final userJson = jsonEncode(user.toJson());
+    preferences.setString('user', userJson);
+    setState(() => this.user = user);
+  }
+
+  Future storePersistTokenIn() async {
+    preferences = await SharedPreferences.getInstance();
+    preferences.setBool('isLogged', true);
   }
 
   Widget emailBuilder(myConE) {
@@ -123,17 +170,29 @@ class _LoginState extends State<Login> {
               }
             },
             controller: myConP,
-            obscureText: !isRegis,
+            obscureText: isHidden,
             style: TextStyle(color: Colors.black87),
             decoration: InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.only(top: 14),
-                prefixIcon: Icon(
-                  Icons.lock,
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.only(top: 14),
+              prefixIcon: Icon(
+                Icons.lock,
+                color: Color(0xffef6b63),
+              ),
+              hintText: 'Password ',
+              hintStyle: TextStyle(color: Colors.black38),
+              suffixIcon: InkWell(
+                onTap: () {
+                  setState(() {
+                    isHidden = !isHidden;
+                  });
+                },
+                child: Icon(
+                  Icons.visibility,
                   color: Color(0xffef6b63),
                 ),
-                hintText: 'Password ',
-                hintStyle: TextStyle(color: Colors.black38)),
+              ),
+            ),
           ),
         )
       ],
@@ -274,10 +333,24 @@ class _LoginState extends State<Login> {
           backgroundColor: MaterialStateProperty.all(Colors.white),
         ),
         onPressed: () => {
-          if (EmailCon.text == regisEmail &&
-              PassCon.text == regisPass &&
-              isRegis == false)
+          // inspect(this.user),
+          if (isRegis == false && this.user == null)
             {
+              Fluttertoast.showToast(
+                msg:
+                    "Tidak ada akun yang tersimpan di device ini, silahkan register",
+                toastLength: Toast.LENGTH_LONG,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.redAccent,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              ),
+            }
+          else if (isRegis == false &&
+              EmailCon.text == this.user.email &&
+              PassCon.text == this.user.password)
+            {
+              storePersistTokenIn(),
               Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -285,10 +358,12 @@ class _LoginState extends State<Login> {
                       //   return Dasboard(UserData : {EmailCon.text,PassCon.text,dateInput.text,NameCon.text});
                       // },
                       builder: (context) => Dashboard(
-                          Email: EmailCon.text,
-                          Name: NameCon.text,
-                          DateBirth: dateInput.text.toString(),
-                          Password: PassCon.text)))
+                            // Email: EmailCon.text,
+                            // Name: NameCon.text,
+                            // DateBirth: dateInput.text.toString(),
+                            // Password: PassCon.text
+                            user: this.user,
+                          )))
               //   builder: (context) => const Dasboard(),
               //   // Pass the arguments as part of the RouteSettings. The
               //   // DetailScreen reads the arguments from these settings.
@@ -301,6 +376,19 @@ class _LoginState extends State<Login> {
               //     },
               //   ),
               // ))
+            }
+          else if (isRegis == false &&
+              regisEmail != this.user.email &&
+              regisPass != this.user.password)
+            {
+              Fluttertoast.showToast(
+                msg: "password atau email salah",
+                toastLength: Toast.LENGTH_SHORT,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.redAccent,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              )
             }
           else if (regisEmail == "" || regisPass == "")
             {
@@ -330,7 +418,9 @@ class _LoginState extends State<Login> {
               PassCon.clear(),
               setState((() {
                 isRegis = !isRegis;
-              }))
+              })),
+              // nanti masukin ke shared preferences data usernya disini
+              storePersist(dateInput = dateInput.text.toString())
             }
           else
             {
